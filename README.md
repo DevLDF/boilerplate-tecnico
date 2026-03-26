@@ -1,85 +1,220 @@
-# ⚡ LF Software Studio - El Chasis de Hierro (Master Mold)
+# ⚡ LF Software Studio — El Chasis de Hierro (Master Mold)
 
-Este repositorio es el **núcleo técnico** de nuestra consultora. No es un proyecto final, es la infraestructura estandarizada que nos permite construir, desplegar y escalar software para clientes (Inmobiliarias, locales de ropa, abogados) en tiempo récord usando Inteligencia Artificial.
+> Este repositorio es el **núcleo técnico** de la consultora. No es un proyecto final: es la infraestructura estandarizada que permite construir, desplegar y escalar software para clientes (inmobiliarias, locales de ropa, estudios jurídicos) en tiempo récord usando Inteligencia Artificial.
 
-## 🎯 Nuestra Visión (El Negocio)
-Operamos bajo un modelo de **Alta Velocidad y MRR (Ingresos Recurrentes)**.
-- **Velocidad:** Usamos este molde para que la IA (Claude Code) no pierda tiempo configurando cañerías y se enfoque en la lógica del negocio del cliente.
-- **Calidad de Hierro:** Cada proyecto que sale de aquí es seguro, tipado y escalable.
-- **Aislamiento:** Cada cliente tendrá su propio repositorio clonado de este molde y su propia instancia de Supabase.
+---
+
+## 🎯 Visión de Negocio
+
+Operamos bajo un modelo de **Alta Velocidad + MRR (Monthly Recurring Revenue)**.
+
+| Pilar | Descripción |
+| :--- | :--- |
+| **Velocidad** | Claude Code no pierde tiempo en configuración. Arranca directo en lógica de negocio. |
+| **Calidad de Hierro** | Cada proyecto que sale de aquí es seguro, tipado y escalable desde el día uno. |
+| **Aislamiento** | Cada cliente tiene su propio repo clonado de este molde y su propia instancia de Supabase. |
+| **Recurrencia** | El modelo SaaS por cliente garantiza ingresos predecibles mes a mes. |
 
 ---
 
 ## 🏗️ Arquitectura de Hierro (Stack 2026)
-Para que la IA no alucine y el código sea indestructible, estandarizamos:
 
-- **Framework:** Next.js 16 (App Router) - El estándar de rendimiento.
-- **Base de Datos:** Supabase (PostgreSQL) - Seguridad a nivel de fila (RLS).
-- **Comunicación:** Server Actions + **ZSA** - Acciones de servidor estrictamente tipadas.
-- **Validación:** **Zod** - El "Contrato" de datos. Si no pasa Zod, no entra a la base de datos.
-- **UI:** **shadcn/ui** + Tailwind CSS - Componentes consistentes que la IA conoce de memoria.
-- **TypeScript** — modo estricto, sin excepciones.
+Para que la IA no alucine y el código sea indestructible, estandarizamos en una sola dirección:
+
+| Capa | Tecnología | Razón |
+| :--- | :--- | :--- |
+| **Framework** | Next.js 16 (App Router) | Estándar de rendimiento. RSC + Streaming nativos. |
+| **Lenguaje** | TypeScript strict | Cero `any`. Los errores se detectan en compile-time, no en producción. |
+| **Base de Datos** | Supabase (PostgreSQL) | RLS nativo, Auth incluido, Storage, Realtime. Todo en uno. |
+| **Comunicación** | Server Actions + ZSA | Mutaciones tipadas de punta a punta, sin API REST intermedia. |
+| **Validación** | Zod | Contrato de datos en runtime. Si no pasa Zod, no entra a la DB. |
+| **UI** | shadcn/ui + Tailwind CSS | Componentes que la IA conoce de memoria. Accesibles por defecto. |
+| **Deploy** | Vercel | Preview deployments automáticos en cada PR. |
 
 ---
 
-## 📁 Anatomía del Repositorio (Mapa para el Ingeniero)
+## 🔒 Seguridad de Grado Industrial
 
-| Carpeta | Contenido | Razón de Ser |
+### Row Level Security (RLS) — Supabase
+
+RLS es la política que vive **dentro de PostgreSQL**, no en el código. Garantiza que un usuario solo pueda leer y escribir sus propios datos, incluso si hay un bug en el código de aplicación.
+
+```sql
+-- Ejemplo: Un usuario solo puede ver SUS propiedades
+CREATE POLICY "Usuarios ven sus propias propiedades"
+ON propiedades FOR SELECT
+USING (auth.uid() = user_id);
+
+-- Un admin puede ver todas
+CREATE POLICY "Admins ven todo"
+ON propiedades FOR SELECT
+USING (auth.role() = 'admin');
+```
+
+**Regla de hierro:** Toda tabla nueva en Supabase debe tener RLS activado desde el primer día.
+
+```sql
+ALTER TABLE nueva_tabla ENABLE ROW LEVEL SECURITY;
+```
+
+### Validación de Capas con Zod
+
+Los datos pasan por tres capas de validación antes de tocar la base de datos:
+
+```
+Browser (form HTML) → Schema Zod en /validations → Server Action (ZSA) → Supabase RLS
+     Capa 1                   Capa 2                    Capa 3             Capa 4
+```
+
+Nunca se confía en datos del cliente. Siempre se valida en el servidor.
+
+### Middleware de Sesión
+
+El `middleware.ts` en la raíz intercepta **cada request** y refresca el token de Supabase automáticamente. Sin esto, las sesiones expiran silenciosamente y el usuario queda en un estado inconsistente.
+
+```ts
+// middleware.ts — gestión automática de sesión
+export async function middleware(request: NextRequest) {
+  return await updateSession(request) // refresca el JWT en cada request
+}
+```
+
+---
+
+## 💰 Análisis de Costos: Hobby vs Pro
+
+### Vercel
+
+| Feature | Hobby (Free) | Pro ($20/mes) |
 | :--- | :--- | :--- |
-| **`/app`** | Rutas y Vistas | Estructura de navegación del cliente. |
-| **`/actions`** | Lógica de Negocio | Aquí vive el "Cerebro". Nada de lógica dentro de los componentes. |
-| **`/validations`** | Esquemas Zod | Los contratos de datos. Evitan que entre "basura" a la DB. |
-| **`/lib/supabase`** | Infraestructura | Clientes de conexión. Se configuran una vez y no se tocan. |
-| **`/components/ui`** | Átomos de Diseño | Botones, inputs y tablas base de shadcn. |
-| **`/components/forms`** | Módulos de Entrada | Formularios complejos generados a partir de Zod. |
-| **`/types`** | Tipado Global | Diccionario de TypeScript para evitar errores de compilación. |
-| **`/hooks`** | Custom Hooks | Lógica de UI reutilizable. Solo cliente, sin acceso directo a DB. |
-| **`/components/shared`** | Componentes Compuestos | Reutilizables entre features. Pueden llamar Server Actions. |
+| Bandwidth | 100 GB/mes | 1 TB/mes |
+| Builds | 100/día | Sin límite |
+| Preview Deployments | ✅ | ✅ |
+| Custom Domains | 1 | Ilimitados |
+| Analytics | Básico | Avanzado |
+| **Ideal para** | MVP / validación | Clientes en producción |
+
+### Supabase
+
+| Feature | Free | Pro ($25/mes) |
+| :--- | :--- | :--- |
+| Base de datos | 500 MB | 8 GB |
+| Auth usuarios | Ilimitados | Ilimitados |
+| Almacenamiento | 1 GB | 100 GB |
+| Edge Functions | 500K invocaciones | 2M invocaciones |
+| Backups | ❌ | Diarios |
+| SLA | ❌ | 99.9% uptime |
+| **Ideal para** | MVP / demo | Producción real |
+
+**Estrategia de la consultora:** Arrancar cada cliente en Free, migrar a Pro cuando supere las métricas de uso. El costo de $45/mes (Vercel Pro + Supabase Pro) se justifica a partir del segundo mes de MRR.
+
+---
+
+## 📁 Anatomía del Repositorio
+
+```
+/
+├── app/                  → Routing y Vistas (Next.js App Router)
+├── actions/              → Lógica de Negocio (Server Actions con ZSA)
+├── validations/          → Contratos de Datos (Schemas Zod)
+├── lib/
+│   └── supabase/         → Infraestructura de Conexión
+├── components/
+│   ├── ui/               → Átomos de Diseño (shadcn/ui)
+│   ├── forms/            → Formularios complejos generados desde Zod
+│   └── shared/           → Componentes compuestos reutilizables
+├── types/                → Tipos TypeScript inferidos de Zod
+├── hooks/                → Custom Hooks de React (solo cliente)
+├── middleware.ts          → Gestión de sesión Supabase (intercepta todo)
+├── .env.example          → Variables de entorno documentadas
+├── CLAUDE.md             → Reglas estrictas para la IA
+└── tsconfig.json         → TypeScript strict mode
+```
+
+### Descripción detallada
+
+**`/app`** — Solo routing, layouts y pages. Sin lógica de negocio. Cada `page.tsx` delega todo a components y llama Server Actions. Regla: si estás escribiendo `fetch()` o lógica SQL acá, lo estás haciendo mal.
+
+**`/actions`** — El cerebro. Server Actions organizadas por dominio (`user.actions.ts`, `property.actions.ts`). Todas usan `createServerAction()` de ZSA con schema Zod. El handler recibe el input ya validado y tipado.
+
+**`/validations`** — Los contratos. Un archivo por dominio (`user.schema.ts`, `property.schema.ts`). Son la fuente de verdad. Los tipos de TypeScript se infieren desde acá, nunca se escriben a mano.
+
+**`/lib/supabase`** — La fontanería. Tres clientes, cada uno para su contexto:
+- `client.ts` → Client Components (browser)
+- `server.ts` → Server Components y Server Actions
+- `middleware.ts` → Middleware de Next.js
+
+**`/components/ui`** — Átomos base de shadcn/ui. No se modifican directamente: se extienden.
+
+**`/components/forms`** — Formularios complejos construidos sobre `react-hook-form` + resolvers de Zod. Leen los schemas de `/validations` para auto-generarse.
+
+**`/components/shared`** — Piezas reutilizables entre features: `DataTable`, `PageHeader`, `ConfirmDialog`. Pueden usar hooks y llamar Server Actions.
 
 ---
 
 ## 🔄 Flujo de Datos
 
 ```
-Request HTTP
-    │
-    ▼
-app/          → Routing, layouts, pages (solo UI y composición)
-    │
-    ▼
-actions/      → Server Actions con ZSA (lógica de negocio + mutaciones)
-    │
-    ▼
-lib/supabase/ → Cliente Supabase, queries, helpers de DB
-    │
-    ▼
-validations/  → Schemas Zod compartidos (input/output de actions)
+Usuario en el Browser
+        │
+        ▼
+app/page.tsx              → Renderiza el layout y los componentes
+        │
+        ▼
+components/forms/         → Captura el input del usuario
+        │
+        ▼
+actions/x.actions.ts      → Valida con Zod, ejecuta lógica de negocio
+        │
+        ▼
+lib/supabase/server.ts    → Persiste en PostgreSQL con RLS activo
+        │
+        ▼
+validations/x.schema.ts   → Define el contrato en toda la cadena
 ```
 
 ---
 
 ## 🤖 Workflow con Claude Code
-Para mantener la integridad, toda instrucción a la IA debe seguir estas reglas:
-1. **Leer `CLAUDE.md`** antes de cualquier tarea.
-2. **Validación obligatoria:** Antes de crear una tabla o un form, definir el esquema en `/validations`.
-3. **Server-First:** No usar `'use client'` a menos que sea estrictamente necesario para interactividad.
+
+Para mantener la integridad arquitectónica, toda instrucción a Claude debe respetar:
+
+1. **Leer `CLAUDE.md`** antes de cualquier tarea — contiene las reglas absolutas.
+2. **Schema-first:** Antes de crear una tabla o formulario, definir el schema en `/validations`.
+3. **Server-First:** No usar `'use client'` a menos que sea estrictamente necesario.
+4. **No duplicar tipos:** Los tipos se infieren desde Zod, nunca se definen manualmente.
 
 ---
 
-## 📐 Convenciones de código
+## 🗺️ Roadmap de Evolución
 
-- Cada Server Action **debe** tener input validado con Zod + ZSA.
-- Los tipos se infieren desde schemas Zod, nunca se duplican a mano:
-  ```ts
-  export type User = z.infer<typeof userSchema>
-  ```
-- Un componente de `/app` no importa directamente desde `/lib/supabase`.
-- Los errores de actions se manejan con el sistema de errores de ZSA.
+El chasis es vivo. Estas son las próximas integraciones planificadas:
+
+| Tecnología | Estado | Propósito |
+| :--- | :--- | :--- |
+| **Drizzle ORM** | Planificado | Query builder tipado sobre Supabase/PostgreSQL. Reemplaza queries manuales. |
+| **Sentry** | Planificado | Monitoreo de errores en producción. Alertas automáticas. |
+| **Playwright** | Planificado | Testing E2E automatizado. Valida flows críticos antes de cada deploy. |
+| **Resend** | Planificado | Emails transaccionales (confirmación, recuperación de cuenta). |
+| **Stripe** | Por cliente | Pagos y suscripciones. Se integra en cada proyecto que lo requiera. |
 
 ---
 
 ## 🛠️ Setup para el Socio (Lauti)
-1. Clonar el repositorio.
-2. Copiar `.env.example` a `.env.local` y pedir las keys a Francisco.
-3. Ejecutar `npm install`.
-4. Usar Claude Code para extender la funcionalidad según el rubro del cliente.
+
+```bash
+# 1. Clonar el repo del cliente (clonado desde este molde)
+git clone https://github.com/DevLDF/[nombre-cliente]
+
+# 2. Configurar variables de entorno
+cp .env.example .env.local
+# Pedir las Supabase keys a Francisco
+
+# 3. Instalar dependencias
+npm install
+
+# 4. Levantar en local
+npm run dev
+```
+
+> Ante cualquier duda sobre arquitectura, leer `CLAUDE.md`. Ante cualquier duda sobre el negocio, hablar con Francisco.
