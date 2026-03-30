@@ -1,4 +1,4 @@
-# ⚡ LF Software Studio — El Chasis de Hierro (Master Mold)
+# ⚡ LF Software Studio — El Chasis de Hierro (Base Template)
 
 > Este repositorio es el **núcleo técnico** de la consultora. No es un proyecto final: es la infraestructura estandarizada que permite construir, desplegar y escalar software para clientes (inmobiliarias, locales de ropa, estudios jurídicos) en tiempo récord usando Inteligencia Artificial.
 
@@ -23,7 +23,7 @@ Para que la IA no alucine y el código sea indestructible, estandarizamos en una
 
 | Capa | Tecnología | Razón |
 | :--- | :--- | :--- |
-| **Framework** | Next.js 16 (App Router) | Estándar de rendimiento. RSC + Streaming nativos. |
+| **Framework** | Next.js 15.5.14 (App Router) | Versión estable con soporte de seguridad activo. RSC + Streaming nativos. |
 | **Lenguaje** | TypeScript strict | Cero `any`. Los errores se detectan en compile-time, no en producción. |
 | **Base de Datos** | Supabase (PostgreSQL) | RLS nativo, Auth incluido, Storage, Realtime. Todo en uno. |
 | **Comunicación** | Server Actions + ZSA | Mutaciones tipadas de punta a punta, sin API REST intermedia. |
@@ -110,22 +110,57 @@ export async function middleware(request: NextRequest) {
 
 ---
 
+## 🏗️ Sistema de dos niveles
+
+Este repo es el **Nivel 1 (Base)**. Nunca se entrega directamente a un cliente.
+
+```
+base-template  ←  este repo
+      │
+      ├── vertical-inmobiliaria   (Nivel 2) → contratos, alquileres, propiedades
+      ├── vertical-restaurante    (Nivel 2) → menú, mesas, pedidos
+      └── vertical-ropa           (Nivel 2) → inventario, proveedores, ventas
+              │
+              └── cliente-almada            (Nivel 3) → fork del vertical, customizado
+              └── cliente-X                 (Nivel 3) → otro cliente del mismo rubro
+```
+
+**Cómo crear un cliente nuevo:**
+```bash
+# 1. Crear repo desde el vertical correspondiente (botón "Use this template" en GitHub)
+gh repo create DevLDF/cliente-X --template DevLDF/vertical-inmobiliaria --private
+
+# 2. Clonar y configurar
+git clone https://github.com/DevLDF/cliente-X
+# Editar SOLO: config/site.ts y config/features.ts
+
+# 3. Crear proyecto Supabase nuevo para ese cliente
+# 4. Actualizar .env.local con sus keys
+# 5. Deploy: vercel --prod
+```
+
+---
+
 ## 📁 Anatomía del Repositorio
 
 ```
 /
 ├── app/                  → Routing y Vistas (Next.js App Router)
 ├── actions/              → Lógica de Negocio (Server Actions con ZSA)
+├── config/               → ⚙️  Configuración por cliente
+│   ├── site.ts           →     Nombre, logo, colores, dominio
+│   └── features.ts       →     Feature flags (qué módulos están activos)
 ├── validations/          → Contratos de Datos (Schemas Zod)
 ├── lib/
-│   └── supabase/         → Infraestructura de Conexión
+│   └── supabase/         → 🔴 CORE — no modificar
 ├── components/
-│   ├── ui/               → Átomos de Diseño (shadcn/ui)
-│   ├── forms/            → Formularios complejos generados desde Zod
+│   ├── ui/               → 🔴 CORE — shadcn/ui, no modificar
+│   ├── forms/            → Formularios construidos sobre Zod
 │   └── shared/           → Componentes compuestos reutilizables
 ├── types/                → Tipos TypeScript inferidos de Zod
 ├── hooks/                → Custom Hooks de React (solo cliente)
-├── middleware.ts          → Gestión de sesión Supabase (intercepta todo)
+├── migrations/           → Changelog de cambios del core para propagar
+├── middleware.ts          → 🔴 CORE — Gestión de sesión Supabase
 ├── .env.example          → Variables de entorno documentadas
 ├── CLAUDE.md             → Reglas estrictas para la IA
 └── tsconfig.json         → TypeScript strict mode
@@ -200,15 +235,15 @@ El chasis es vivo. Estas son las próximas integraciones planificadas:
 
 ---
 
-## 🛠️ Setup para el Socio (Lauti)
+## 🛠️ Setup para el equipo
 
 ```bash
-# 1. Clonar el repo del cliente (clonado desde este molde)
+# 1. Clonar el repo del cliente asignado
 git clone https://github.com/DevLDF/[nombre-cliente]
 
 # 2. Configurar variables de entorno
 cp .env.example .env.local
-# Pedir las Supabase keys a Francisco
+# Completar con las Supabase keys del cliente
 
 # 3. Instalar dependencias
 npm install
@@ -217,4 +252,24 @@ npm install
 npm run dev
 ```
 
-> Ante cualquier duda sobre arquitectura, leer `CLAUDE.md`. Ante cualquier duda sobre el negocio, hablar con Francisco.
+### Workflow Git
+
+```
+main        ← producción, protegido (requiere PR + review)
+develop     ← integración diaria
+feat/xxx    ← features nuevas
+fix/xxx     ← bugfixes
+```
+
+**Reglas del equipo:**
+- Nadie pushea directo a `main` — todo pasa por PR
+- Cambios al CORE del base-template → PR con review del otro integrante
+- Cambios al CORE se documentan en `/migrations/` antes de propagarse
+
+### División de responsabilidades sugerida
+- Cada cliente tiene un "dueño" asignado que es el punto de contacto
+- Los cambios al `base-template` los revisan ambos antes de mergear
+- Los verticales se desarrollan colaborativamente según la carga de trabajo
+
+> Ante cualquier duda sobre arquitectura: leer `CLAUDE.md`.
+> Ante cualquier duda sobre un cliente: hablar con el dueño asignado de ese proyecto.
