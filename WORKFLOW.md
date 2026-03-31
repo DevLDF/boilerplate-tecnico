@@ -13,6 +13,7 @@ Manual operativo para Lautaro y Francisco. Seguir este documento en cada proyect
 5. [Pull Requests paso a paso](#5-pull-requests-paso-a-paso)
 6. [Trabajar en paralelo sin conflictos](#6-trabajar-en-paralelo-sin-conflictos)
 7. [Reglas de oro](#7-reglas-de-oro)
+8. [Trabajar con Claude Code](#8-trabajar-con-claude-code)
 
 ---
 
@@ -362,6 +363,75 @@ Estas reglas nunca se rompen, sin excepciones:
 | 5 | **Cambios al CORE del base-template → PR + review obligatorio** | Un error en el core se propaga a todos los clientes. |
 | 6 | **Avisar por Slack antes de tocar archivos compartidos** | Previene el 90% de los conflictos. |
 | 7 | **Documentar en `/migrations/` todo cambio al CORE** | Permite propagarlo a otros repos de forma controlada. |
+
+---
+
+## 8. Trabajar con Claude Code
+
+Claude Code es el asistente de desarrollo que usamos en todos los proyectos. Esta sección explica cómo integrarlo al flujo de trabajo.
+
+### Estructura de carpetas en tu máquina
+
+Todos los repos viven dentro de una carpeta contenedora (`orka/`):
+
+```
+orka/
+├── boilerplate-tecnico/     ← abrís Claude acá cuando tocás el base
+├── vertical-inmobiliaria/   ← abrís Claude acá cuando trabajás el vertical
+├── cliente-almada/          ← abrís Claude acá cuando trabajás para Almada
+└── cliente-[nombre]/        ← abrís Claude acá cuando trabajás para ese cliente
+```
+
+**Regla:** Siempre abrís Claude Code desde la carpeta del repo en el que vas a trabajar ese día, no desde `orka/`. Así Claude lee el `CLAUDE.md` correcto y tiene el contexto del proyecto.
+
+### Cómo abrir Claude Code en el repo correcto
+
+```bash
+# Desde la terminal, pararse en el repo del cliente
+cd /ruta/a/orka/cliente-almada
+claude
+```
+
+O desde VS Code: abrir la carpeta del repo → abrir terminal → escribir `claude`.
+
+### Qué lee Claude al arrancar una sesión
+
+Al abrir Claude Code en un repo, automáticamente lee:
+1. El `CLAUDE.md` de la raíz — reglas y contexto del proyecto
+2. El código existente del repo — arquitectura, patrones, convenciones
+
+No hace falta explicarle el stack ni la arquitectura en cada sesión — eso está en el `CLAUDE.md`.
+
+### Cómo arrancar el desarrollo de un cliente nuevo
+
+Antes de pedirle a Claude que construya features, completar el `KICKOFF.md` del cliente:
+
+1. Abrir `KICKOFF.md` en el repo del cliente
+2. Completar las secciones `[PENDIENTE]` con las notas de la reunión con el cliente
+3. Copiar todo el contenido del `KICKOFF.md`
+4. Pegarlo como primer mensaje en Claude Code
+
+Claude va a analizar la información y devolver un plan de desarrollo. **No arranca a escribir código hasta que DevLDF apruebe el plan.**
+
+### Flujo de trabajo con Claude durante el desarrollo
+
+1. Crear el branch correspondiente antes de pedirle cambios a Claude:
+   ```bash
+   git checkout -b feat/nombre-de-la-feature
+   ```
+2. Pedirle a Claude la feature o el cambio
+3. Revisar el código generado antes de commitear
+4. Commitear y hacer el PR como siempre
+
+**Nunca pedirle a Claude que haga commits o pushes directamente** — eso lo hace el desarrollador después de revisar.
+
+### Cuándo usar Claude para cada repo
+
+| Repo | Cuándo abrirlo |
+|------|----------------|
+| `boilerplate-tecnico` | Cuando hay un cambio al CORE que se va a propagar a todos |
+| `vertical-inmobiliaria` | Cuando se agrega lógica genérica del rubro (no específica de un cliente) |
+| `cliente-[nombre]` | Cuando se trabaja en features específicas de ese cliente |
 
 ---
 
