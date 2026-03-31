@@ -128,10 +128,10 @@ base-template  ←  este repo
 **Cómo crear un cliente nuevo:**
 ```bash
 # 1. Crear repo desde el vertical correspondiente (botón "Use this template" en GitHub)
-gh repo create DevLDF/cliente-X --template DevLDF/vertical-inmobiliaria --private
+gh repo create Orka/cliente-X --template Orka/vertical-inmobiliaria --private
 
 # 2. Clonar y configurar
-git clone https://github.com/DevLDF/cliente-X
+git clone https://github.com/Orka/cliente-X
 # Editar SOLO: config/site.ts y config/features.ts
 
 # 3. Crear proyecto Supabase nuevo para ese cliente
@@ -239,7 +239,7 @@ El chasis es vivo. Estas son las próximas integraciones planificadas:
 
 ```bash
 # 1. Clonar el repo del cliente asignado
-git clone https://github.com/DevLDF/[nombre-cliente]
+git clone https://github.com/Orka/[nombre-cliente]
 
 # 2. Configurar variables de entorno
 cp .env.example .env.local

@@ -1,4 +1,4 @@
-# Guía de Trabajo — DevLDF
+# Guía de Trabajo — Orka
 
 Manual operativo para Lautaro y Francisco. Seguir este documento en cada proyecto, siempre.
 
@@ -25,19 +25,19 @@ Seguir este checklist en orden. No saltear pasos.
 
 ```bash
 # En la terminal, con gh instalado:
-gh repo create DevLDF/cliente-[nombre] --template DevLDF/vertical-[rubro] --private
+gh repo create Orka/cliente-[nombre] --template Orka/vertical-[rubro] --private
 ```
 
 Ejemplos:
 ```bash
-gh repo create DevLDF/cliente-rodriguez --template DevLDF/vertical-inmobiliaria --private
-gh repo create DevLDF/cliente-laprima  --template DevLDF/vertical-restaurante   --private
+gh repo create Orka/cliente-rodriguez --template Orka/vertical-inmobiliaria --private
+gh repo create Orka/cliente-laprima  --template Orka/vertical-restaurante   --private
 ```
 
 ### Paso 2 — Clonar el repo en tu máquina
 
 ```bash
-git clone https://github.com/DevLDF/cliente-[nombre].git
+git clone https://github.com/Orka/cliente-[nombre].git
 cd cliente-[nombre]
 ```
 
@@ -107,7 +107,7 @@ Abrir `http://localhost:3000` — tiene que cargar sin errores.
 ### Paso 8 — Conectar a Vercel
 
 1. Ir a [vercel.com](https://vercel.com) → New Project → Import from GitHub
-2. Seleccionar `DevLDF/cliente-[nombre]`
+2. Seleccionar `Orka/cliente-[nombre]`
 3. En **Environment Variables** agregar las mismas del `.env.local`
 4. Deploy
 
@@ -411,7 +411,7 @@ Antes de pedirle a Claude que construya features, completar el `KICKOFF.md` del 
 3. Copiar todo el contenido del `KICKOFF.md`
 4. Pegarlo como primer mensaje en Claude Code
 
-Claude va a analizar la información y devolver un plan de desarrollo. **No arranca a escribir código hasta que DevLDF apruebe el plan.**
+Claude va a analizar la información y devolver un plan de desarrollo. **No arranca a escribir código hasta que Orka apruebe el plan.**
 
 ### Flujo de trabajo con Claude durante el desarrollo
 
