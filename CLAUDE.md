@@ -6,117 +6,63 @@ Estas reglas son **obligatorias** en todo el proyecto. No hay excepciones.
 
 ## Stack obligatorio
 
-- **Next.js 15** con App Router (versión 15.5.14 — estable, con soporte de seguridad activo)
+- **Next.js 15** con App Router (versión 15.5.14)
 - **TypeScript** en modo estricto (`strict: true`)
 - **Zod** para toda validación de datos
 - **ZSA** (`zsa`) para todas las Server Actions
+- **Supabase** (PostgreSQL) con Row Level Security siempre habilitado
+- **shadcn/ui + Tailwind CSS** para UI
+- **Vercel** para deploy
 
 ---
 
 ## Arquitectura de capas — Regla fundamental
 
-Este repo tiene tres capas. Cada capa tiene reglas distintas:
-
 ### 🔴 CORE — Nunca modificar
-Estos archivos son idénticos en todos los proyectos. Cambiarlos rompe la propagación de updates desde el base-template.
-
-```
-/lib/supabase/**     → clientes estandarizados de DB
-/middleware.ts       → auth refresh automático
-/components/ui/**    → shadcn/ui intocable
-/types/index.ts      → tipos base compartidos
-```
+Idénticos en todos los proyectos. Cambiarlos rompe la propagación de updates.
+- `/lib/supabase/**` — clientes estandarizados de DB
+- `/middleware.ts` — auth refresh automático
+- `/components/ui/**` — shadcn/ui intocable
+- `/types/index.ts` — tipos base compartidos
 
 ### 🟡 CONFIG — Solo estos archivos cambian por cliente
-Al clonar para un nuevo cliente, únicamente se editan estos dos archivos:
+- `/config/site.ts` — nombre, logo, colores, dominio
+- `/config/features.ts` — qué módulos están activos
 
-```
-/config/site.ts      → nombre, logo, colores, dominio
-/config/features.ts  → qué módulos están activos (feature flags)
-```
+### 🟢 EXTENSIÓN — Agregar libremente
+- `/app/[feature]/` — nuevas rutas
+- `/actions/[feature].actions.ts` — nuevas server actions
+- `/validations/[feature].schema.ts` — nuevos schemas Zod
+- `/components/[vertical]/` — nuevos componentes
 
-### 🟢 EXTENSIÓN — Agregar libremente por vertical/cliente
-Nuevas features se agregan en estas carpetas, nunca reemplazando el core:
-
-```
-/app/[feature]/                    → nuevas rutas
-/actions/[feature].actions.ts      → nuevas server actions
-/validations/[feature].schema.ts   → nuevos schemas Zod
-/components/[vertical]/            → nuevos componentes
-```
-
-**Regla:** Si necesitás modificar algo del CORE para que una feature funcione, es una señal de que la feature está mal diseñada. Revisá el approach.
+Si necesitás modificar el CORE para que una feature funcione, la feature está mal diseñada.
 
 ---
 
 ## TypeScript — Reglas estrictas
 
-```json
-// tsconfig.json debe tener siempre:
-{
-  "compilerOptions": {
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true
-  }
-}
-```
-
-- **Prohibido** usar `any`. Usar `unknown` y tipar correctamente.
-- **Prohibido** usar `as TipoX` para castear sin validación previa.
-- **Prohibido** ignorar errores con `// @ts-ignore` o `// @ts-expect-error` sin comentario justificado.
-- Los tipos de dominio **siempre** se infieren desde schemas Zod:
-
-```ts
-// ✅ Correcto
-export type User = z.infer<typeof userSchema>
-
-// ❌ Prohibido
-export type User = { id: string; name: string }
-```
+- Prohibido usar `any` — usar `unknown` y tipar correctamente
+- Prohibido castear con `as TipoX` sin validación previa
+- Prohibido `// @ts-ignore` sin comentario justificado
+- Los tipos de dominio siempre se infieren desde schemas Zod: `type X = z.infer<typeof xSchema>`
 
 ---
 
 ## Zod — Uso obligatorio
 
-- **Todo input de Server Action** debe tener un schema Zod en `/validations`.
-- **Todo dato externo** (API, DB, env vars) debe pasar por `schema.parse()` o `schema.safeParse()`.
-- Los schemas viven en `/validations`, nunca inline en components o actions.
-- Nombrar schemas con sufijo `Schema`: `userSchema`, `projectSchema`.
-
-```ts
-// ✅ Correcto
-import { userCreateSchema } from '@/validations/user.schema'
-
-// ❌ Prohibido — validación inline
-const parsed = z.object({ name: z.string() }).parse(data)
-```
+- Todo input de Server Action necesita un schema en `/validations`
+- Todo dato externo (API, DB, env vars) debe pasar por `schema.parse()` o `schema.safeParse()`
+- Los schemas viven en `/validations`, nunca inline
+- Nombrar con sufijo `Schema`: `userSchema`, `contratoSchema`
 
 ---
 
 ## Server Actions — ZSA obligatorio
 
-**Todas** las Server Actions usan `createServerAction` de `zsa`:
-
-```ts
-// ✅ Patrón correcto
-'use server'
-import { createServerAction } from 'zsa'
-import { userCreateSchema } from '@/validations/user.schema'
-
-export const createUserAction = createServerAction()
-  .input(userCreateSchema)
-  .handler(async ({ input }) => {
-    // input ya está tipado y validado
-    const user = await db.user.create({ data: input })
-    return user
-  })
-```
-
-- **Prohibido** crear Server Actions sin ZSA (`'use server'` solo, sin `createServerAction`).
-- El `handler` recibe `input` ya validado — no re-validar dentro del handler.
-- Los errores se propagan con `throw new Error()` o retornando el error estructurado de ZSA.
+- Todas las Server Actions usan `createServerAction()` de `zsa`
+- Prohibido crear Server Actions con `'use server'` solo, sin `createServerAction`
+- El handler recibe `input` ya validado — no re-validar dentro del handler
+- Los errores se propagan con `throw` o el error estructurado de ZSA
 
 ---
 
@@ -126,73 +72,50 @@ export const createUserAction = createServerAction()
 /app             → Solo routing, layouts, pages
 /actions         → Server Actions (ZSA). Un archivo por dominio.
 /config          → Configuración por cliente (site.ts, features.ts)
-/lib/supabase    → Clientes Supabase (client, server, middleware) — CORE
+/lib/supabase    → Clientes Supabase — CORE
 /validations     → Schemas Zod. Un archivo por dominio.
-/components/ui   → Componentes shadcn/ui — CORE, no modificar
+/components/ui   → shadcn/ui — CORE, no modificar
 /components/shared → Componentes compuestos reutilizables
 /types           → Tipos inferidos de schemas Zod
 /hooks           → Custom hooks de React (solo cliente)
-/migrations      → Changelog de cambios del base-template para propagar
+/migrations      → Changelog de cambios del base-template
 ```
 
 ### Reglas de importación
 
-- `/app` puede importar desde `/components`, `/actions`, `/types`, `/config`
-- `/actions` puede importar desde `/lib/supabase`, `/validations`, `/types`, `/config`
-- `/components` **NO** importa desde `/lib/supabase` directamente
+- `/app` importa desde `/components`, `/actions`, `/types`, `/config`
+- `/actions` importa desde `/lib/supabase`, `/validations`, `/types`, `/config`
+- `/components` NO importa desde `/lib/supabase` directamente
 - `/lib/supabase` no importa desde `/actions` ni `/components`
-- Cualquier componente puede importar desde `/config`
 
 ---
 
 ## Next.js 15 — Reglas
 
-- **App Router siempre**. No usar Pages Router.
-- Los Server Components son el default. Agregar `'use client'` solo cuando sea necesario.
-- Los datos se fetchean en Server Components o Server Actions, nunca con `useEffect` + `fetch` del cliente.
-- Las rutas dinámicas usan `generateStaticParams` cuando sea posible.
+- App Router siempre. No usar Pages Router.
+- Server Components por defecto. `'use client'` solo cuando sea necesario.
+- Datos en Server Components o Server Actions, nunca con `useEffect` + fetch del cliente.
+- Usar `generateStaticParams` en rutas dinámicas cuando sea posible.
 
 ---
 
 ## Supabase — Reglas
 
-- Usar el cliente correcto según el contexto:
-  - Server Components/Actions → `lib/supabase/server.ts`
-  - Client Components → `lib/supabase/client.ts`
-  - Middleware → `lib/supabase/middleware.ts`
-- **Nunca** usar la service key en código de cliente.
-- Las queries reutilizables van en `lib/supabase/`, no inline en components.
-- **Toda tabla nueva** debe tener RLS activado desde el primer commit.
-
----
-
-## Feature flags — Uso correcto
-
-```ts
-// ✅ Correcto — verificar el flag antes de renderizar
-import { features } from "@/config/features"
-
-export default function Sidebar() {
-  return (
-    <nav>
-      {features.hasContracts && <Link href="/contratos">Contratos</Link>}
-      {features.hasInventory && <Link href="/inventario">Inventario</Link>}
-    </nav>
-  )
-}
-```
+- Server Components/Actions → `lib/supabase/server.ts`
+- Client Components → `lib/supabase/client.ts`
+- Middleware → `lib/supabase/middleware.ts`
+- Nunca usar la service key en código de cliente
+- Queries reutilizables en `lib/supabase/`, no inline
+- Toda tabla nueva requiere RLS activado desde el primer commit
 
 ---
 
 ## Propagación de cambios del base-template
 
-Cuando se hace un cambio importante en el CORE del base-template:
-1. Se documenta en `/migrations/YYYY-MM-DD-descripcion.md`
-2. Se propaga a los repos de verticales y clientes usando Claude Code:
-   ```
-   "Aplicá el cambio documentado en migrations/YYYY-MM-DD-descripcion.md
-    sin modificar las customizaciones específicas de este proyecto"
-   ```
+Cuando se modifica el CORE:
+1. Documentar en `/migrations/YYYY-MM-DD-descripcion.md`
+2. Propagar a verticales y clientes con Claude Code:
+   `"Aplicá el cambio de migrations/YYYY-MM-DD-descripcion.md sin tocar customizaciones del proyecto"`
 
 ---
 
@@ -200,9 +123,9 @@ Cuando se hace un cambio importante en el CORE del base-template:
 
 - Generar tipos TypeScript manuales si existe un schema Zod equivalente
 - Crear Server Actions sin ZSA
-- Usar `fetch` en `useEffect` para obtener datos de Supabase
+- Usar `fetch` en `useEffect` para datos de Supabase
 - Ignorar errores de TypeScript
-- Agregar dependencias no aprobadas sin preguntar
-- Modificar archivos del CORE (`/lib/supabase`, `/middleware.ts`, `/components/ui`)
+- Agregar dependencias sin preguntar
+- Modificar archivos del CORE
 - Crear archivos fuera de la estructura definida sin justificación
-- Hardcodear el nombre del cliente — siempre usar `siteConfig.name` de `/config/site.ts`
+- Hardcodear el nombre del cliente — siempre usar `siteConfig.name`
